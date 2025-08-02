@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <title>Gerenciador de Boards Completo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            margin: 0; padding: 20px;
+            display: flex; justify-content: center;
+        }
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        label {
+            font-weight: 600;
+        }
+        input[type=text], textarea {
+            width: 100%;
+            padding: 8px 10px;
+            margin: 6px 0 12px 0;
+            box-sizing: border-box;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+        button {
+            background: #287bff;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            font-size: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-right: 8px;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background: #1a5fe4;
+        }
+        button.danger {
+            background: #e04848;
+        }
+        button.danger:hover {
+            background: #b93131;
+        }
+        .message {
+            text-align: center;
+            margin: 15px 0;
+            font-weight: 600;
+        }
+        .message.success {
+            color: green;
+        }
+        .message.error {
+            color: #d93737;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .entity-list {
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+        .entity-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .entity-item input[type=text], .entity-item textarea {
+            margin-right: 12px;
+        }
+        .actions button {
+            margin-left: 6px;
+        }
+        .nested {
+            margin-left: 30px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Gerenciador Completo de Boards</h1>
+
+    <div id="msg" class="message"></div>
+
+    <!-- Seção Board -->
+    <section class="section" id="boards-section">
+        <h2>Boards</h2>
+        <form id="board-form">
+            <label for="board-name">Nome do Board:</label>
+            <input type="text" id="board-name" required placeholder="Digite o nome do board" />
+            <button type="submit">Criar Board</button>
+        </form>
+        <div id="boards-list" class="entity-list"></div>
+    </section>
+
+    <!-- Seção Columns (dynamic) -->
+    <section class="section" id="columns-section" style="display:none;">
+        <h2>Colunas do Board: <span id="current-board-name"></span></h2>
+        <form id="column-form">
+            <label for="column-name">Nome da Coluna:</label>
+            <input type="text" id="column-name" required placeholder="Digite o nome da coluna" />
+            <button type="submit">Criar Coluna</button>
+            <button type="button" id="back-to-boards" style="background:#555;">Voltar para Boards</button>
+        </form>
+        <div id="columns-list" class="entity-list nested"></div>
+    </section>
+
+    <!-- Seção Tasks (dynamic) -->
+    <section class="section" id="tasks-section" style="display:none;">
+        <h2>Tarefas da Coluna: <span id="current-column-name"></span></h2>
+        <form id="task-form">
+            <label for="task-name">Nome da Tarefa:</label>
+            <input type="text" id="task-name" required placeholder="Digite o nome da tarefa" />
+            <label for="task-desc">Descrição (opcional):</label>
+            <textarea id="task-desc" rows="2" placeholder="Descrição da tarefa"></textarea>
+            <button type="submit">Criar Tarefa</button>
+            <button type="button" id="back-to-columns" style="background:#555;">Voltar para Colunas</button>
+        </form>
+        <div id="tasks-list" class="entity-list nested"></div>
+    </section>
+</div>
+
+<script>
+    const API_BASE = 'http://localhost:8080';
+
+    const msgDiv = document.getElementById('msg');
+
+    // Boards DOM refs
+    const boardForm = document.getElementById('board-form');
+    const boardNameInput = document.getElementById('board-name');
+    const boardsListDiv = document.getElementById('boards-list');
+
+    // Columns DOM refs
+    const columnsSection = document.getElementById('columns-section');
+    const columnsListDiv = document.getElementById('columns-list');
+    const columnForm = document.getElementById('column-form');
+    const columnNameInput = document.getElementById('column-name');
+    const currentBoardNameSpan = document.getElementById('current-board-name');
+    const backToBoardsBtn = document.getElementById('back-to-boards');
+
+    // Tasks DOM refs
+    const tasksSection = document.getElementById('tasks-section');
+    const tasksListDiv = document.getElementById('tasks-list');
+    const taskForm = document.getElementById('task-form');
+    const taskNameInput = document.getElementById('task-name');
+    const taskDescInput = document.getElementById('task-desc');
+    const currentColumnNameSpan = document.getElementById('current-column-name');
+    const backToColumnsBtn = document.getElementById('back-to-columns');
+
+    // Estado atual selecionado
+    let selectedBoard = null;
+    let selectedColumn = null;
+
+    function showMessage(text, type='success') {
+        msgDiv.textContent = text;
+        msgDiv.className = 'message ' + (type === 'success' ? 'success' : 'error');
+        setTimeout(() => {
+            msgDiv.textContent = '';
+            msgDiv.className = 'message';
+        }, 4000);
+    }
+
+    // --- BOARDS ---
+
+    async function loadBoards() {
+        try {
+            const res = await fetch(`${API_BASE}/boards`);
+            if(!res.ok) throw new Error('Erro ao carregar boards');
+            const boards = await res.json();
+            renderBoards(boards);
+        } catch(e) {
+            showMessage(e.message, 'error');
+        }
+    }
+
+    function renderBoards(boards) {
+        boardsListDiv.innerHTML = '';
+        if(boards.length === 0) {
+            boardsListDiv.textContent = 'Nenhum board cadastrado.';
+            return;
+        }
+
+        boards.forEach(board => {
+            const div = document.createElement('div');
+            div.className = 'entity-item';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = board.name;
+            input.readOnly = true;
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'actions';
+
+            const btnEdit = document.createElement('button');
+            btnEdit.textContent = 'Editar';
+            btnEdit.onclick = () => {
+                input.readOnly = false;
+                input.focus();
+                btnEdit.style.display = 'none';
+                btnSave.style.display = 'inline-block';
+                btnCancel.style.display = 'inline-block';
+            };
+
+            const btnSave = document.createElement('button');
+            btnSave.textContent = 'Salvar';
+            btnSave.style.display = 'none';
+            btnSave.onclick = async () => {
+                const newName = input.value.trim();
+                if(!newName) {
+                    showMessage('Nome do board não pode ser vazio', 'error');
+                    return;
+                }
+                try {
+                    const res = await fetch(`${API_BASE}/boards/${board.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: board.id, name: newName, columns: board.columns || [] })
+                    });
+                    if(!res.ok) throw new Error('Erro ao atualizar board');
+                    board.name = newName;
+                    input.readOnly = true;
+                    btnEdit.style.display = 'inline-block';
+                    btnSave.style.display = 'none';
+                    btnCancel.style.display = 'none';
+                    showMessage('Board atualizado com sucesso');
+                    loadBoards(); // Recarrega para manter ordem e dados
+                } catch(e) {
+                    showMessage(e.message, 'error');
+                }
+            };
+
+            const btnCancel = document.createElement('button');
+            btnCancel.textContent = 'Cancelar';
+            btnCancel.style.display = 'none';
+            btnCancel.onclick = () => {
+                input.value = board.name;
+                input.readOnly = true;
+                btnEdit.style.display = 'inline-block';
+                btnSave.style.display = 'none';
+                btnCancel.style.display = 'none';
+            };
+
+            const btnDelete = document.createElement('button');
+            btnDelete.textContent = 'Excluir';
+            btnDelete.className = 'danger';
+            btnDelete.onclick = async () => {
+                if(!confirm(`Excluir board "${board.name}"?`)) return;
+                try {
+                    const res = await fetch(`${API_BASE}/boards/${board.id}`, { method: 'DELETE' });
+                    if(!res.ok) throw new Error('Erro ao excluir board');
+                    showMessage('Board excluído com sucesso');
+                    loadBoards();
+                } catch(e) {
+                    showMessage(e.message, 'error');
+                }
+            };
+
+            const btnViewColumns = document.createElement('button');
+            btnViewColumns.textContent = 'Ver Colunas';
+            btnViewColumns.onclick = () => {
+                selectedBoard = board;
+                currentBoardNameSpan.textContent = board.name;
+                boardsListDiv.parentElement.style.display = 'none'; // esconder boards
+                columnsSection.style.display = 'block';
+                loadColumns(board.id);
+            };
+
+            actionsDiv.appendChild(btnViewColumns);
+            actionsDiv.appendChild(btnEdit);
+            actionsDiv.appendChild(btnSave);
+            actionsDiv.appendChild(btnCancel);
+            actionsDiv.appendChild(btnDelete);
+
+            div.appendChild(input);
+            div.appendChild(actionsDiv);
+            boardsListDiv.appendChild(div);
+        });
+    }
+
+    boardForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const name = boardNameInput.value.trim();
+        if(!name) {
+            showMessage('Informe o nome do board', 'error');
+            return;
+        }
+        try {
+            const res = await fetch(`${API_BASE}/boards`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ name, columns: [] })
+            });
+            if(!res.ok) throw new Error('Erro ao criar board');
+            boardNameInput.value = '';
+            showMessage('Board criado com sucesso');
+            loadBoards();
+        } catch(e) {
+            showMessage(e.message, 'error');
+        }
+    };
+
+    // --- COLUMNS ---
+
+    const columnFormSubmit = async e => {
+        e.preventDefault();
+        const name = columnNameInput.value.trim();
+        if(!name) {
+            showMessage('Informe o nome da coluna', 'error');
+            return;
+        }
+        try {
+            const res = await fetch(`${API_BASE}/boards/${selectedBoard.id}/columns`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ name, tasks: [] })
+            });
+            if(!res.ok) throw new Error('Erro ao criar coluna');
+            columnNameInput.value = '';
+            showMessage('Coluna criada com sucesso');
+            loadColumns(selectedBoard.id);
+        } catch(e) {
+            showMessage(e.message, 'error');
+        }
+    };
+
+    async function loadColumns(boardId) {
+        try {
+            const res = await fetch(`${API_BASE}/boards/${boardId}/columns`);
+            if(!res.ok) throw new Error('Erro ao carregar colunas');
+            const columns = await res.json();
+            renderColumns(columns);
+        } catch(e) {
+            showMessage(e.message, 'error');
+        }
+    }
+
+    function renderColumns(columns) {
+        columnsListDiv.innerHTML = '';
+        if(columns.length === 0) {
+            columnsListDiv.textContent = 'Nenhuma coluna cadastrada.';
+            return;
+        }
+
+        columns.forEach(column => {
+            const div = document.createElement('div');
+            div.className = 'entity-item';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = column.name;
+            input.readOnly = true;
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'actions';
+
+            const btnEdit = document.createElement('button');
+            btnEdit.textContent = 'Editar';
+            btnEdit.onclick = () => {
+                input.readOnly = false;
+                input.focus();
+                btnEdit.style.display = 'none';
+                btnSave.style.display = 'inline-block';
+                btnCancel.style.display = 'inline-block';
+            };
+
+            const btnSave = document.createElement('button');
+            btnSave.textContent = 'Salvar';
+            btnSave.style.display = 'none';
+            btnSave.onclick = async () => {
+                const newName = input.value.trim();
+                if(!newName) {
+                    showMessage('Nome da coluna não pode ser vazio', 'error');
+                    return;
+                }
+                try {
+                    const res = await fetch(`${API_BASE}/columns/${column.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: column.id, name: newName, tasks: column.tasks || [] })
+                    });
+                    if(!res.ok) throw new Error('Erro ao atualizar coluna');
+                    column.name = newName;
+                    input.readOnly = true;
+                    btnEdit.style.display = 'inline-block';
+                    btnSave.style.display = 'none';
+                    btnCancel.style.display = 'none';
+                    showMessage('Coluna atualizada com sucesso');
+                    loadColumns(selectedBoard.id);
+                } catch(e) {
+                    showMessage(e.message, 'error');
+                }
+            };
+
+            const btnCancel = document.createElement('button');
+            btnCancel.textContent = 'Cancelar';
+            btnCancel.style.display = 'none';
+            btnCancel.onclick = () => {
+                input.value = column.name;
+                input.readOnly = true;
+                btnEdit.style.display = 'inline-block';
+                btnSave.style.display = 'none';
+                btnCancel.style.display = 'none';
+            };
+
+            const btnDelete = document.createElement('button');
+            btnDelete.textContent = 'Excluir';
+            btnDelete.className = 'danger';
+            btnDelete.onclick = async () => {
+                if(!confirm(`Excluir coluna "${column.name}"?`)) return;
+                try {
+                    const res = await fetch(`${API_BASE}/columns/${column.id}`, { method: 'DELETE' });
+                    if(!res.ok) throw new Error('Erro ao excluir coluna');
+                    showMessage('Coluna excluída com sucesso');
+                    loadColumns(selectedBoard.id);
+                } catch(e) {
+                    showMessage(e.message, 'error');
+                }
+            };
+
+            const btnViewTasks = document.createElement('button');
+            btnViewTasks.textContent = 'Ver Tarefas';
+            btnViewTasks.onclick = () => {
+                selectedColumn = column;
+                currentColumnNameSpan.textContent = column.name;
+                columnsSection.style.display = 'none';
+                tasksSection.style.display = 'block';
+                loadTasks(column.id);
+            };
+
+            actionsDiv.appendChild(btnViewTasks);
+            actionsDiv.appendChild(btnEdit);
+            actionsDiv.appendChild(btnSave);
+            actionsDiv.appendChild(btnCancel);
+            actionsDiv.appendChild(btnDelete);
+
+            div.appendChild(input);
+            div.appendChild(actionsDiv);
+            columnsListDiv.appendChild(div);
+        });
+    }
+
+    columnForm.onsubmit = columnFormSubmit;
+
+    backToBoardsBtn.onclick = () => {
+        selectedBoard = null;
+        columnsSection.style.display = 'none';
+        boardsListDiv.parentElement.style.display = 'block';
+        showMessage('');
+    };
+
+    // --- TASKS ---
+
+    const taskFormSubmit = async e => {
+        e.preventDefault();
+        const name = taskNameInput.value.trim();
+        if(!name) {
+            showMessage('Informe o nome da tarefa', 'error');
+            return;
+        }
+        const description = taskDescInput.value.trim();
+        try {
+            const res = await fetch(`${API_BASE}/columns/${selectedColumn.id}/tasks`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ name, description })
+            });
+            if(!res.ok) throw new Error('Erro ao criar tarefa');
+            taskNameInput.value = '';
+            taskDescInput.value = '';
+            showMessage('Tarefa criada com sucesso');
+            loadTasks(selectedColumn.id);
+        } catch(e) {
+            showMessage(e.message, 'error');
+        }
+    };
+
+    async function loadTasks(columnId) {
+        try {
+            const res = await fetch(`${API_BASE}/columns/${columnId}/tasks`);
+            if(!res.ok) throw new Error('Erro ao carregar tarefas');
+            const tasks = await res.json();
+            renderTasks(tasks);
+        } catch(e) {
+            showMessage(e.message, 'error');
+        }
+    }
+
+    function renderTasks(tasks) {
+        tasksListDiv.innerHTML = '';
+        if(tasks.length === 0) {
+            tasksListDiv.textContent = 'Nenhuma tarefa cadastrada.';
+            return;
+        }
+
+        tasks.forEach(task => {
+            const div = document.createElement('div');
+            div.className = 'entity-item';
+
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.value = task.name;
+            nameInput.readOnly = true;
+
+            const descInput = document.createElement('textarea');
+            descInput.value = task.description || '';
+            descInput.readOnly = true;
+            descInput.rows = 1;
+            descInput.style.resize = 'none';
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'actions';
+
+            const btnEdit = document.createElement('button');
+            btnEdit.textContent = 'Editar';
+            btnEdit.onclick = () => {
+                nameInput.readOnly = false;
+                descInput.readOnly = false;
+                nameInput.focus();
+                btnEdit.style.display = 'none';
+                btnSave.style.display = 'inline-block';
+                btnCancel.style.display = 'inline-block';
+            };
+
+            const btnSave = document.createElement('button');
+            btnSave.textContent = 'Salvar';
+            btnSave.style.display = 'none';
+            btnSave.onclick = async () => {
+                const newName = nameInput.value.trim();
+                if(!newName) {
+                    showMessage('Nome da tarefa não pode ser vazio', 'error');
+                    return;
+                }
+                try {
+                    const res = await fetch(`${API_BASE}/tasks/${task.id}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ id: task.id, name: newName, description: descInput.value })
+                    });
+                    if(!res.ok) throw new Error('Erro ao atualizar tarefa');
+                    task.name = newName;
+                    task.description = descInput.value;
+                    nameInput.readOnly = true;
+                    descInput.readOnly = true;
+                    btnEdit.style.display = 'inline-block';
+                    btnSave.style.display = 'none';
+                    btnCancel.style.display = 'none';
+                    showMessage('Tarefa atualizada com sucesso');
+                    loadTasks(selectedColumn.id);
+                } catch(e) {
+                    showMessage(e.message, 'error');
+                }
+            };
+
+            const btnCancel = document.createElement('button');
+            btnCancel.textContent = 'Cancelar';
+            btnCancel.style.display = 'none';
+            btnCancel.onclick = () => {
+                nameInput.value = task.name;
+                descInput.value = task.description || '';
+                nameInput.readOnly = true;
+                descInput.readOnly = true;
+                btnEdit.style.display = 'inline-block';
+                btnSave.style.display = 'none';
+                btnCancel.style.display = 'none';
+            };
+
+            const btnDelete = document.createElement('button');
+            btnDelete.textContent = 'Excluir';
+            btnDelete.className = 'danger';
+            btnDelete.onclick = async () => {
+                if(!confirm(`Excluir tarefa "${task.name}"?`)) return;
+                try {
+                    const res = await fetch(`${API_BASE}/tasks/${task.id}`, { method: 'DELETE' });
+                    if(!res.ok) throw new Error('Erro ao excluir tarefa');
+                    showMessage('Tarefa excluída com sucesso');
+                    loadTasks(selectedColumn.id);
+                } catch(e) {
+                    showMessage(e.message, 'error');
+                }
+            };
+
+            actionsDiv.appendChild(btnEdit);
+            actionsDiv.appendChild(btnSave);
+            actionsDiv.appendChild(btnCancel);
+            actionsDiv.appendChild(btnDelete);
+
+            div.appendChild(nameInput);
+            div.appendChild(descInput);
+            div.appendChild(actionsDiv);
+            tasksListDiv.appendChild(div);
+        });
+    }
+
+    taskForm.onsubmit = taskFormSubmit;
+
+    backToColumnsBtn.onclick = () => {
+        selectedColumn = null;
+        tasksSection.style.display = 'none';
+        columnsSection.style.display = 'block';
+        showMessage('');
+    };
+
+    // Inicializa
+    loadBoards();
+
+</script>
+
+</body>
+</html>
