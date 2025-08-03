@@ -48,4 +48,7 @@ public class BoardColumnService {
     public void deleteById(Long id) {
         boardColumnRepository.deleteById(id);
     }
+
+
+    
 }

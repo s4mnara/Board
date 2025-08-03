@@ -7,7 +7,7 @@ import lombok.*;
 import java.util.List;
 
 @Entity
-@Table(name = "board")
+@Table(name = "boards")
 @Getter
 @Setter
 @NoArgsConstructor

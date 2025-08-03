@@ -1,6 +1,7 @@
 package br.com.dio.board.Controller;
-
+import br.com.dio.board.service.CardService;
 import br.com.dio.board.model.BoardColumn;
+import br.com.dio.board.model.Card;
 import br.com.dio.board.service.BoardColumnService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -8,15 +9,26 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 
+
+
 @RestController
 @RequestMapping("/columns")
+@CrossOrigin(origins = "*")
 public class BoardColumnController {
 
     private final BoardColumnService service;
+    private final CardService cardService;
 
-    public BoardColumnController(BoardColumnService service) {
+    public BoardColumnController(BoardColumnService service, CardService cardService) {
         this.service = service;
+        this.cardService = cardService;
     }
+
+    @GetMapping("/{columnId}/cards")
+    public List<Card> getCardsByColumnId(@PathVariable Long columnId) {
+        return cardService.findByBoardColumnId(columnId);
+    }
+
     // POST /columns/board/{boardId}
     @PostMapping("/board/{boardId}")
     public ResponseEntity<BoardColumn> createForBoard(
@@ -67,4 +79,3 @@ public class BoardColumnController {
         return ResponseEntity.notFound().build();
     }
 }
-

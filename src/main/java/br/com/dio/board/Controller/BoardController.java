@@ -68,6 +68,20 @@ public class BoardController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
+    @PutMapping("/{id}")
+    public ResponseEntity<Board> updateBoard(@PathVariable Long id, @RequestBody Board board) {
+        Optional<Board> existingOpt = boardService.findById(id);
+        if (existingOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Board existing = existingOpt.get();
+        existing.setName(board.getName());
+        // se quiser atualizar colunas aqui, cuidado, normalmente atualiza separado
+
+        Board updated = boardService.save(existing);
+        return ResponseEntity.ok(updated);
+    }
 
     // GET /boards/{boardId}/columns
     @GetMapping("/{boardId}/columns")

@@ -136,488 +136,517 @@
 </div>
 
 <script>
-    const API_BASE = 'http://localhost:8080';
+    document.addEventListener('DOMContentLoaded', () => {
 
-    const msgDiv = document.getElementById('msg');
+        const API_BASE = 'http://localhost:8080';
 
-    // Boards DOM refs
-    const boardForm = document.getElementById('board-form');
-    const boardNameInput = document.getElementById('board-name');
-    const boardsListDiv = document.getElementById('boards-list');
+        const msgDiv = document.getElementById('msg');
 
-    // Columns DOM refs
-    const columnsSection = document.getElementById('columns-section');
-    const columnsListDiv = document.getElementById('columns-list');
-    const columnForm = document.getElementById('column-form');
-    const columnNameInput = document.getElementById('column-name');
-    const currentBoardNameSpan = document.getElementById('current-board-name');
-    const backToBoardsBtn = document.getElementById('back-to-boards');
+        // Boards DOM refs
+        const boardForm = document.getElementById('board-form');
+        const boardNameInput = document.getElementById('board-name');
+        const boardsListDiv = document.getElementById('boards-list');
 
-    // Tasks DOM refs
-    const tasksSection = document.getElementById('tasks-section');
-    const tasksListDiv = document.getElementById('tasks-list');
-    const taskForm = document.getElementById('task-form');
-    const taskNameInput = document.getElementById('task-name');
-    const taskDescInput = document.getElementById('task-desc');
-    const currentColumnNameSpan = document.getElementById('current-column-name');
-    const backToColumnsBtn = document.getElementById('back-to-columns');
+        // Columns DOM refs
+        const columnsSection = document.getElementById('columns-section');
+        const columnsListDiv = document.getElementById('columns-list');
+        const columnForm = document.getElementById('column-form');
+        const columnNameInput = document.getElementById('column-name');
+        const currentBoardNameSpan = document.getElementById('current-board-name');
+        const backToBoardsBtn = document.getElementById('back-to-boards');
 
-    // Estado atual selecionado
-    let selectedBoard = null;
-    let selectedColumn = null;
+        // Tasks DOM refs
+        const tasksSection = document.getElementById('tasks-section');
+        const tasksListDiv = document.getElementById('tasks-list');
+        const taskForm = document.getElementById('task-form');
+        const taskNameInput = document.getElementById('task-name');
+        const taskDescInput = document.getElementById('task-desc');
+        const currentColumnNameSpan = document.getElementById('current-column-name');
+        const backToColumnsBtn = document.getElementById('back-to-columns');
 
-    function showMessage(text, type='success') {
-        msgDiv.textContent = text;
-        msgDiv.className = 'message ' + (type === 'success' ? 'success' : 'error');
-        setTimeout(() => {
-            msgDiv.textContent = '';
-            msgDiv.className = 'message';
-        }, 4000);
-    }
+        // Estado atual selecionado
+        let selectedBoard = null;
+        let selectedColumn = null;
 
-    // --- BOARDS ---
-
-    async function loadBoards() {
-        try {
-            const res = await fetch(`${API_BASE}/boards`);
-            if(!res.ok) throw new Error('Erro ao carregar boards');
-            const boards = await res.json();
-            renderBoards(boards);
-        } catch(e) {
-            showMessage(e.message, 'error');
-        }
-    }
-
-    function renderBoards(boards) {
-        boardsListDiv.innerHTML = '';
-        if(boards.length === 0) {
-            boardsListDiv.textContent = 'Nenhum board cadastrado.';
-            return;
+        function showMessage(text, type='success') {
+            msgDiv.textContent = text;
+            msgDiv.className = 'message ' + (type === 'success' ? 'success' : 'error');
+            setTimeout(() => {
+                msgDiv.textContent = '';
+                msgDiv.className = 'message';
+            }, 4000);
         }
 
-        boards.forEach(board => {
-            const div = document.createElement('div');
-            div.className = 'entity-item';
+        // --- BOARDS ---
 
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = board.name;
-            input.readOnly = true;
+        async function loadBoards() {
+            try {
+                const res = await fetch(`${API_BASE}/boards`);
+                if(!res.ok) throw new Error(`Erro ao carregar boards: ${res.status} ${res.statusText}`);
+                const boards = await res.json();
+                renderBoards(boards);
+            } catch(e) {
+                console.error(e);
+                showMessage(e.message, 'error');
+            }
+        }
 
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'actions';
+        function renderBoards(boards) {
+            boardsListDiv.innerHTML = '';
+            if(boards.length === 0) {
+                boardsListDiv.textContent = 'Nenhum board cadastrado.';
+                return;
+            }
 
-            const btnEdit = document.createElement('button');
-            btnEdit.textContent = 'Editar';
-            btnEdit.onclick = () => {
-                input.readOnly = false;
-                input.focus();
-                btnEdit.style.display = 'none';
-                btnSave.style.display = 'inline-block';
-                btnCancel.style.display = 'inline-block';
-            };
+            boards.forEach(board => {
+                const div = document.createElement('div');
+                div.className = 'entity-item';
 
-            const btnSave = document.createElement('button');
-            btnSave.textContent = 'Salvar';
-            btnSave.style.display = 'none';
-            btnSave.onclick = async () => {
-                const newName = input.value.trim();
-                if(!newName) {
-                    showMessage('Nome do board não pode ser vazio', 'error');
-                    return;
-                }
-                try {
-                    const res = await fetch(`${API_BASE}/boards/${board.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: board.id, name: newName, columns: board.columns || [] })
-                    });
-                    if(!res.ok) throw new Error('Erro ao atualizar board');
-                    board.name = newName;
-                    input.readOnly = true;
-                    btnEdit.style.display = 'inline-block';
-                    btnSave.style.display = 'none';
-                    btnCancel.style.display = 'none';
-                    showMessage('Board atualizado com sucesso');
-                    loadBoards(); // Recarrega para manter ordem e dados
-                } catch(e) {
-                    showMessage(e.message, 'error');
-                }
-            };
-
-            const btnCancel = document.createElement('button');
-            btnCancel.textContent = 'Cancelar';
-            btnCancel.style.display = 'none';
-            btnCancel.onclick = () => {
+                const input = document.createElement('input');
+                input.type = 'text';
                 input.value = board.name;
                 input.readOnly = true;
-                btnEdit.style.display = 'inline-block';
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'actions';
+
+                const btnEdit = document.createElement('button');
+                btnEdit.textContent = 'Editar';
+                btnEdit.onclick = () => {
+                    input.readOnly = false;
+                    input.focus();
+                    btnEdit.style.display = 'none';
+                    btnSave.style.display = 'inline-block';
+                    btnCancel.style.display = 'inline-block';
+                };
+
+                const btnSave = document.createElement('button');
+                btnSave.textContent = 'Salvar';
                 btnSave.style.display = 'none';
+                btnSave.onclick = async () => {
+                    const newName = input.value.trim();
+                    if(!newName) {
+                        showMessage('Nome do board não pode ser vazio', 'error');
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`${API_BASE}/boards/${board.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: board.id, name: newName, columns: board.columns || [] })
+                        });
+                        if(!res.ok) throw new Error(`Erro ao atualizar board: ${res.status} ${res.statusText}`);
+                        board.name = newName;
+                        input.readOnly = true;
+                        btnEdit.style.display = 'inline-block';
+                        btnSave.style.display = 'none';
+                        btnCancel.style.display = 'none';
+                        showMessage('Board atualizado com sucesso');
+                        loadBoards(); // Recarrega para manter ordem e dados
+                    } catch(e) {
+                        console.error(e);
+                        showMessage(e.message, 'error');
+                    }
+                };
+
+                const btnCancel = document.createElement('button');
+                btnCancel.textContent = 'Cancelar';
                 btnCancel.style.display = 'none';
-            };
-
-            const btnDelete = document.createElement('button');
-            btnDelete.textContent = 'Excluir';
-            btnDelete.className = 'danger';
-            btnDelete.onclick = async () => {
-                if(!confirm(`Excluir board "${board.name}"?`)) return;
-                try {
-                    const res = await fetch(`${API_BASE}/boards/${board.id}`, { method: 'DELETE' });
-                    if(!res.ok) throw new Error('Erro ao excluir board');
-                    showMessage('Board excluído com sucesso');
-                    loadBoards();
-                } catch(e) {
-                    showMessage(e.message, 'error');
-                }
-            };
-
-            const btnViewColumns = document.createElement('button');
-            btnViewColumns.textContent = 'Ver Colunas';
-            btnViewColumns.onclick = () => {
-                selectedBoard = board;
-                currentBoardNameSpan.textContent = board.name;
-                boardsListDiv.parentElement.style.display = 'none'; // esconder boards
-                columnsSection.style.display = 'block';
-                loadColumns(board.id);
-            };
-
-            actionsDiv.appendChild(btnViewColumns);
-            actionsDiv.appendChild(btnEdit);
-            actionsDiv.appendChild(btnSave);
-            actionsDiv.appendChild(btnCancel);
-            actionsDiv.appendChild(btnDelete);
-
-            div.appendChild(input);
-            div.appendChild(actionsDiv);
-            boardsListDiv.appendChild(div);
-        });
-    }
-
-    boardForm.onsubmit = async (e) => {
-        e.preventDefault();
-        const name = boardNameInput.value.trim();
-        if(!name) {
-            showMessage('Informe o nome do board', 'error');
-            return;
-        }
-        try {
-            const res = await fetch(`${API_BASE}/boards`, {
-                method: 'POST',
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ name, columns: [] })
-            });
-            if(!res.ok) throw new Error('Erro ao criar board');
-            boardNameInput.value = '';
-            showMessage('Board criado com sucesso');
-            loadBoards();
-        } catch(e) {
-            showMessage(e.message, 'error');
-        }
-    };
-
-    // --- COLUMNS ---
-
-    const columnFormSubmit = async e => {
-        e.preventDefault();
-        const name = columnNameInput.value.trim();
-        if(!name) {
-            showMessage('Informe o nome da coluna', 'error');
-            return;
-        }
-        try {
-            const res = await fetch(`${API_BASE}/boards/${selectedBoard.id}/columns`, {
-                method: 'POST',
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ name, tasks: [] })
-            });
-            if(!res.ok) throw new Error('Erro ao criar coluna');
-            columnNameInput.value = '';
-            showMessage('Coluna criada com sucesso');
-            loadColumns(selectedBoard.id);
-        } catch(e) {
-            showMessage(e.message, 'error');
-        }
-    };
-
-    async function loadColumns(boardId) {
-        try {
-            const res = await fetch(`${API_BASE}/boards/${boardId}/columns`);
-            if(!res.ok) throw new Error('Erro ao carregar colunas');
-            const columns = await res.json();
-            renderColumns(columns);
-        } catch(e) {
-            showMessage(e.message, 'error');
-        }
-    }
-
-    function renderColumns(columns) {
-        columnsListDiv.innerHTML = '';
-        if(columns.length === 0) {
-            columnsListDiv.textContent = 'Nenhuma coluna cadastrada.';
-            return;
-        }
-
-        columns.forEach(column => {
-            const div = document.createElement('div');
-            div.className = 'entity-item';
-
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = column.name;
-            input.readOnly = true;
-
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'actions';
-
-            const btnEdit = document.createElement('button');
-            btnEdit.textContent = 'Editar';
-            btnEdit.onclick = () => {
-                input.readOnly = false;
-                input.focus();
-                btnEdit.style.display = 'none';
-                btnSave.style.display = 'inline-block';
-                btnCancel.style.display = 'inline-block';
-            };
-
-            const btnSave = document.createElement('button');
-            btnSave.textContent = 'Salvar';
-            btnSave.style.display = 'none';
-            btnSave.onclick = async () => {
-                const newName = input.value.trim();
-                if(!newName) {
-                    showMessage('Nome da coluna não pode ser vazio', 'error');
-                    return;
-                }
-                try {
-                    const res = await fetch(`${API_BASE}/columns/${column.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: column.id, name: newName, tasks: column.tasks || [] })
-                    });
-                    if(!res.ok) throw new Error('Erro ao atualizar coluna');
-                    column.name = newName;
+                btnCancel.onclick = () => {
+                    input.value = board.name;
                     input.readOnly = true;
                     btnEdit.style.display = 'inline-block';
                     btnSave.style.display = 'none';
                     btnCancel.style.display = 'none';
-                    showMessage('Coluna atualizada com sucesso');
-                    loadColumns(selectedBoard.id);
-                } catch(e) {
-                    showMessage(e.message, 'error');
-                }
-            };
+                };
 
-            const btnCancel = document.createElement('button');
-            btnCancel.textContent = 'Cancelar';
-            btnCancel.style.display = 'none';
-            btnCancel.onclick = () => {
+                const btnDelete = document.createElement('button');
+                btnDelete.textContent = 'Excluir';
+                btnDelete.className = 'danger';
+                btnDelete.onclick = async () => {
+                    if(!confirm(`Excluir board "${board.name}"?`)) return;
+                    try {
+                        const res = await fetch(`${API_BASE}/boards/${board.id}`, { method: 'DELETE' });
+                        if(!res.ok) throw new Error(`Erro ao excluir board: ${res.status} ${res.statusText}`);
+                        showMessage('Board excluído com sucesso');
+                        loadBoards();
+                    } catch(e) {
+                        console.error(e);
+                        showMessage(e.message, 'error');
+                    }
+                };
+
+                const btnViewColumns = document.createElement('button');
+                btnViewColumns.textContent = 'Ver Colunas';
+                btnViewColumns.onclick = () => {
+                    selectedBoard = board;
+                    currentBoardNameSpan.textContent = board.name;
+                    boardsListDiv.parentElement.style.display = 'none'; // esconder boards
+                    columnsSection.style.display = 'block';
+                    loadColumns(board.id);
+                };
+
+                actionsDiv.appendChild(btnViewColumns);
+                actionsDiv.appendChild(btnEdit);
+                actionsDiv.appendChild(btnSave);
+                actionsDiv.appendChild(btnCancel);
+                actionsDiv.appendChild(btnDelete);
+
+                div.appendChild(input);
+                div.appendChild(actionsDiv);
+                boardsListDiv.appendChild(div);
+            });
+        }
+
+        boardForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const name = boardNameInput.value.trim();
+            if(!name) {
+                showMessage('Informe o nome do board', 'error');
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/boards`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ name, columns: [] })
+                });
+                if(!res.ok) throw new Error(`Erro ao criar board: ${res.status} ${res.statusText}`);
+                boardNameInput.value = '';
+                showMessage('Board criado com sucesso');
+                loadBoards();
+            } catch(e) {
+                console.error(e);
+                showMessage(e.message, 'error');
+            }
+        };
+
+        // --- COLUMNS ---
+
+        const columnFormSubmit = async e => {
+            e.preventDefault();
+            const name = columnNameInput.value.trim();
+            if(!name) {
+                showMessage('Informe o nome da coluna', 'error');
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/boards/${selectedBoard.id}/columns`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ name, tasks: [] })
+                });
+                if(!res.ok) throw new Error(`Erro ao criar coluna: ${res.status} ${res.statusText}`);
+                columnNameInput.value = '';
+                showMessage('Coluna criada com sucesso');
+                loadColumns(selectedBoard.id);
+            } catch(e) {
+                console.error(e);
+                showMessage(e.message, 'error');
+            }
+        };
+
+        async function loadColumns(boardId) {
+            try {
+                const res = await fetch(`${API_BASE}/boards/${boardId}/columns`);
+                if(!res.ok) throw new Error(`Erro ao carregar colunas: ${res.status} ${res.statusText}`);
+                const columns = await res.json();
+                renderColumns(columns);
+            } catch(e) {
+                console.error(e);
+                showMessage(e.message, 'error');
+            }
+        }
+
+        function renderColumns(columns) {
+            columnsListDiv.innerHTML = '';
+            if(columns.length === 0) {
+                columnsListDiv.textContent = 'Nenhuma coluna cadastrada.';
+                return;
+            }
+
+            columns.forEach(column => {
+                const div = document.createElement('div');
+                div.className = 'entity-item';
+
+                const input = document.createElement('input');
+                input.type = 'text';
                 input.value = column.name;
                 input.readOnly = true;
-                btnEdit.style.display = 'inline-block';
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'actions';
+
+                const btnEdit = document.createElement('button');
+                btnEdit.textContent = 'Editar';
+                btnEdit.onclick = () => {
+                    input.readOnly = false;
+                    input.focus();
+                    btnEdit.style.display = 'none';
+                    btnSave.style.display = 'inline-block';
+                    btnCancel.style.display = 'inline-block';
+                };
+
+                const btnSave = document.createElement('button');
+                btnSave.textContent = 'Salvar';
                 btnSave.style.display = 'none';
+                btnSave.onclick = async () => {
+                    const newName = input.value.trim();
+                    if(!newName) {
+                        showMessage('Nome da coluna não pode ser vazio', 'error');
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`${API_BASE}/columns/${column.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({name: newName })
+                        });
+                        if(!res.ok) throw new Error(`Erro ao atualizar coluna: ${res.status} ${res.statusText}`);
+                        column.name = newName;
+                        input.readOnly = true;
+                        btnEdit.style.display = 'inline-block';
+                        btnSave.style.display = 'none';
+                        btnCancel.style.display = 'none';
+                        showMessage('Coluna atualizada com sucesso');
+                        loadColumns(selectedBoard.id);
+                    } catch(e) {
+                        console.error(e);
+                        showMessage(e.message, 'error');
+                    }
+                };
+
+                const btnCancel = document.createElement('button');
+                btnCancel.textContent = 'Cancelar';
                 btnCancel.style.display = 'none';
-            };
+                btnCancel.onclick = () => {
+                    input.value = column.name;
+                    input.readOnly = true;
+                    btnEdit.style.display = 'inline-block';
+                    btnSave.style.display = 'none';
+                    btnCancel.style.display = 'none';
+                };
 
-            const btnDelete = document.createElement('button');
-            btnDelete.textContent = 'Excluir';
-            btnDelete.className = 'danger';
-            btnDelete.onclick = async () => {
-                if(!confirm(`Excluir coluna "${column.name}"?`)) return;
-                try {
-                    const res = await fetch(`${API_BASE}/columns/${column.id}`, { method: 'DELETE' });
-                    if(!res.ok) throw new Error('Erro ao excluir coluna');
-                    showMessage('Coluna excluída com sucesso');
-                    loadColumns(selectedBoard.id);
-                } catch(e) {
-                    showMessage(e.message, 'error');
-                }
-            };
+                const btnDelete = document.createElement('button');
+                btnDelete.textContent = 'Excluir';
+                btnDelete.className = 'danger';
+                btnDelete.onclick = async () => {
+                    if(!confirm(`Excluir coluna "${column.name}"?`)) return;
+                    try {
+                        const res = await fetch(`${API_BASE}/columns/${column.id}`, { method: 'DELETE' });
+                        if(!res.ok) throw new Error(`Erro ao excluir coluna: ${res.status} ${res.statusText}`);
+                        showMessage('Coluna excluída com sucesso');
+                        loadColumns(selectedBoard.id);
+                    } catch(e) {
+                        console.error(e);
+                        showMessage(e.message, 'error');
+                    }
+                };
 
-            const btnViewTasks = document.createElement('button');
-            btnViewTasks.textContent = 'Ver Tarefas';
-            btnViewTasks.onclick = () => {
-                selectedColumn = column;
-                currentColumnNameSpan.textContent = column.name;
-                columnsSection.style.display = 'none';
-                tasksSection.style.display = 'block';
-                loadTasks(column.id);
-            };
+                const btnViewTasks = document.createElement('button');
+                btnViewTasks.textContent = 'Ver Tarefas';
+                btnViewTasks.onclick = () => {
+                    selectedColumn = column;
+                    currentColumnNameSpan.textContent = column.name;
+                    columnsSection.style.display = 'none';
+                    tasksSection.style.display = 'block';
+                    loadTasks(column.id);
+                };
 
-            actionsDiv.appendChild(btnViewTasks);
-            actionsDiv.appendChild(btnEdit);
-            actionsDiv.appendChild(btnSave);
-            actionsDiv.appendChild(btnCancel);
-            actionsDiv.appendChild(btnDelete);
+                actionsDiv.appendChild(btnViewTasks);
+                actionsDiv.appendChild(btnEdit);
+                actionsDiv.appendChild(btnSave);
+                actionsDiv.appendChild(btnCancel);
+                actionsDiv.appendChild(btnDelete);
 
-            div.appendChild(input);
-            div.appendChild(actionsDiv);
-            columnsListDiv.appendChild(div);
-        });
-    }
-
-    columnForm.onsubmit = columnFormSubmit;
-
-    backToBoardsBtn.onclick = () => {
-        selectedBoard = null;
-        columnsSection.style.display = 'none';
-        boardsListDiv.parentElement.style.display = 'block';
-        showMessage('');
-    };
-
-    // --- TASKS ---
-
-    const taskFormSubmit = async e => {
-        e.preventDefault();
-        const name = taskNameInput.value.trim();
-        if(!name) {
-            showMessage('Informe o nome da tarefa', 'error');
-            return;
-        }
-        const description = taskDescInput.value.trim();
-        try {
-            const res = await fetch(`${API_BASE}/columns/${selectedColumn.id}/tasks`, {
-                method: 'POST',
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ name, description })
+                div.appendChild(input);
+                div.appendChild(actionsDiv);
+                columnsListDiv.appendChild(div);
             });
-            if(!res.ok) throw new Error('Erro ao criar tarefa');
-            taskNameInput.value = '';
-            taskDescInput.value = '';
-            showMessage('Tarefa criada com sucesso');
-            loadTasks(selectedColumn.id);
-        } catch(e) {
-            showMessage(e.message, 'error');
-        }
-    };
-
-    async function loadTasks(columnId) {
-        try {
-            const res = await fetch(`${API_BASE}/columns/${columnId}/tasks`);
-            if(!res.ok) throw new Error('Erro ao carregar tarefas');
-            const tasks = await res.json();
-            renderTasks(tasks);
-        } catch(e) {
-            showMessage(e.message, 'error');
-        }
-    }
-
-    function renderTasks(tasks) {
-        tasksListDiv.innerHTML = '';
-        if(tasks.length === 0) {
-            tasksListDiv.textContent = 'Nenhuma tarefa cadastrada.';
-            return;
         }
 
-        tasks.forEach(task => {
-            const div = document.createElement('div');
-            div.className = 'entity-item';
+        columnForm.onsubmit = columnFormSubmit;
 
-            const nameInput = document.createElement('input');
-            nameInput.type = 'text';
-            nameInput.value = task.name;
-            nameInput.readOnly = true;
+        backToBoardsBtn.onclick = () => {
+            selectedBoard = null;
+            columnsSection.style.display = 'none';
+            boardsListDiv.parentElement.style.display = 'block';
+            showMessage('');
+        };
 
-            const descInput = document.createElement('textarea');
-            descInput.value = task.description || '';
-            descInput.readOnly = true;
-            descInput.rows = 1;
-            descInput.style.resize = 'none';
+        // --- TASKS ---
 
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'actions';
+        const taskFormSubmit = async e => {
+            e.preventDefault();
+            const title = taskNameInput.value.trim();
+            if (!title) {
+                showMessage('Informe o nome da tarefa', 'error');
+                return;
+            }
+            const description = taskDescInput.value.trim();
+            try {
+                const res = await fetch(`${API_BASE}/cards`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                        title: taskNameInput.value.trim(),
+                        description: taskDescInput.value.trim(),
+                        blocked: false,
+                        blockReason: null,
+                        blocksAmount: 0,
+                        board_column_id: selectedColumn.id   // link da tarefa com a coluna correta
+                    })
 
-            const btnEdit = document.createElement('button');
-            btnEdit.textContent = 'Editar';
-            btnEdit.onclick = () => {
-                nameInput.readOnly = false;
-                descInput.readOnly = false;
-                nameInput.focus();
-                btnEdit.style.display = 'none';
-                btnSave.style.display = 'inline-block';
-                btnCancel.style.display = 'inline-block';
-            };
 
-            const btnSave = document.createElement('button');
-            btnSave.textContent = 'Salvar';
-            btnSave.style.display = 'none';
-            btnSave.onclick = async () => {
-                const newName = nameInput.value.trim();
-                if(!newName) {
-                    showMessage('Nome da tarefa não pode ser vazio', 'error');
-                    return;
-                }
-                try {
-                    const res = await fetch(`${API_BASE}/tasks/${task.id}`, {
-                        method: 'PUT',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ id: task.id, name: newName, description: descInput.value })
-                    });
-                    if(!res.ok) throw new Error('Erro ao atualizar tarefa');
-                    task.name = newName;
-                    task.description = descInput.value;
+
+                });
+                if (!res.ok) throw new Error(`Erro ao criar tarefa: ${res.status} ${res.statusText}`);
+                taskNameInput.value = '';
+                taskDescInput.value = '';
+                showMessage('Tarefa criada com sucesso');
+                loadTasks(selectedColumn.id);
+            } catch (e) {
+                console.error(e);
+                showMessage(e.message, 'error');
+            }
+        };
+
+
+
+        async function loadTasks(columnId) {
+            try {
+                const res = await fetch(`${API_BASE}/columns/${columnId}/cards`);
+                if(!res.ok) throw new Error(`Erro ao carregar tarefas: ${res.status} ${res.statusText}`);
+                const tasks = await res.json();
+                renderTasks(tasks);
+            } catch(e) {
+                console.error(e);
+                showMessage(e.message, 'error');
+            }
+        }
+
+        function renderTasks(tasks) {
+            tasksListDiv.innerHTML = '';
+            if(tasks.length === 0) {
+                tasksListDiv.textContent = 'Nenhuma tarefa cadastrada.';
+                return;
+            }
+
+            tasks.forEach(task => {
+                const div = document.createElement('div');
+                div.className = 'entity-item';
+
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.value = task.title;
+                nameInput.readOnly = true;
+
+                const descInput = document.createElement('textarea');
+                descInput.value = task.description || '';
+                descInput.readOnly = true;
+                descInput.rows = 1;
+                descInput.style.resize = 'none';
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'actions';
+
+                const btnEdit = document.createElement('button');
+                btnEdit.textContent = 'Editar';
+                btnEdit.onclick = () => {
+                    nameInput.readOnly = false;
+                    descInput.readOnly = false;
+                    nameInput.focus();
+                    btnEdit.style.display = 'none';
+                    btnSave.style.display = 'inline-block';
+                    btnCancel.style.display = 'inline-block';
+                };
+
+                const btnSave = document.createElement('button');
+                btnSave.textContent = 'Salvar';
+                btnSave.style.display = 'none';
+                btnSave.onclick = async () => {
+                    const newName = nameInput.value.trim();
+                    if(!newName) {
+                        showMessage('Nome da tarefa não pode ser vazio', 'error');
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`${API_BASE}/cards/${task.id}`, {
+                            method: 'PUT',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ id: task.id, title: newName, description: descInput.value })
+                        });
+                        if(!res.ok) throw new Error(`Erro ao atualizar tarefa: ${res.status} ${res.statusText}`);
+                        task.title = newName;
+                        task.description = descInput.value;
+                        nameInput.readOnly = true;
+                        descInput.readOnly = true;
+                        btnEdit.style.display = 'inline-block';
+                        btnSave.style.display = 'none';
+                        btnCancel.style.display = 'none';
+                        showMessage('Tarefa atualizada com sucesso');
+                        loadTasks(selectedColumn.id);
+                    } catch(e) {
+                        console.error(e);
+                        showMessage(e.message, 'error');
+                    }
+                };
+
+                const btnCancel = document.createElement('button');
+                btnCancel.textContent = 'Cancelar';
+                btnCancel.style.display = 'none';
+                btnCancel.onclick = () => {
+                    nameInput.value = task.title;
+                    descInput.value = task.description || '';
                     nameInput.readOnly = true;
                     descInput.readOnly = true;
                     btnEdit.style.display = 'inline-block';
                     btnSave.style.display = 'none';
                     btnCancel.style.display = 'none';
-                    showMessage('Tarefa atualizada com sucesso');
-                    loadTasks(selectedColumn.id);
-                } catch(e) {
-                    showMessage(e.message, 'error');
-                }
-            };
 
-            const btnCancel = document.createElement('button');
-            btnCancel.textContent = 'Cancelar';
-            btnCancel.style.display = 'none';
-            btnCancel.onclick = () => {
-                nameInput.value = task.name;
-                descInput.value = task.description || '';
-                nameInput.readOnly = true;
-                descInput.readOnly = true;
-                btnEdit.style.display = 'inline-block';
-                btnSave.style.display = 'none';
-                btnCancel.style.display = 'none';
-            };
+                };
 
-            const btnDelete = document.createElement('button');
-            btnDelete.textContent = 'Excluir';
-            btnDelete.className = 'danger';
-            btnDelete.onclick = async () => {
-                if(!confirm(`Excluir tarefa "${task.name}"?`)) return;
-                try {
-                    const res = await fetch(`${API_BASE}/tasks/${task.id}`, { method: 'DELETE' });
-                    if(!res.ok) throw new Error('Erro ao excluir tarefa');
-                    showMessage('Tarefa excluída com sucesso');
-                    loadTasks(selectedColumn.id);
-                } catch(e) {
-                    showMessage(e.message, 'error');
-                }
-            };
+                const btnDelete = document.createElement('button');
+                btnDelete.textContent = 'Excluir';
+                btnDelete.className = 'danger';
+                btnDelete.onclick = async () => {
+                    if(!confirm(`Excluir tarefa "${task.title}"?`)) return;
+                    try {
+                        const res = await fetch(`${API_BASE}/cards/${task.id}`, { method: 'DELETE' });
+                        if(!res.ok) throw new Error(`Erro ao excluir tarefa: ${res.status} ${res.statusText}`);
+                        showMessage('Tarefa excluída com sucesso');
+                        loadTasks(selectedColumn.id);
+                    } catch(e) {
+                        console.error(e);
+                        showMessage(e.message, 'error');
+                    }
+                };
 
-            actionsDiv.appendChild(btnEdit);
-            actionsDiv.appendChild(btnSave);
-            actionsDiv.appendChild(btnCancel);
-            actionsDiv.appendChild(btnDelete);
+                actionsDiv.appendChild(btnEdit);
+                actionsDiv.appendChild(btnSave);
+                actionsDiv.appendChild(btnCancel);
+                actionsDiv.appendChild(btnDelete);
 
-            div.appendChild(nameInput);
-            div.appendChild(descInput);
-            div.appendChild(actionsDiv);
-            tasksListDiv.appendChild(div);
-        });
-    }
+                div.appendChild(nameInput);
+                div.appendChild(descInput);
+                div.appendChild(actionsDiv);
+                tasksListDiv.appendChild(div);
+            });
+        }
 
-    taskForm.onsubmit = taskFormSubmit;
+        taskForm.onsubmit = taskFormSubmit;
 
-    backToColumnsBtn.onclick = () => {
-        selectedColumn = null;
-        tasksSection.style.display = 'none';
-        columnsSection.style.display = 'block';
-        showMessage('');
-    };
+        backToColumnsBtn.onclick = () => {
+            selectedColumn = null;
+            tasksSection.style.display = 'none';
+            columnsSection.style.display = 'block';
+            showMessage('');
+        };
 
-    // Inicializa
-    loadBoards();
+        // Inicializa
+        loadBoards();
+
+    });
 
 </script>
 

@@ -1,5 +1,6 @@
 package br.com.dio.board.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -9,6 +10,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "boardColumn")
 public class Card {
 
     @Id
@@ -28,5 +30,6 @@ public class Card {
     // Cada card pertence a uma coluna
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "board_column_id")
+    @JsonBackReference
     private BoardColumn boardColumn;
 }
