@@ -2,761 +2,544 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8" />
-    <title>Gerenciador de Boards Completo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gerenciador de Boards</title>
     <style>
         :root {
-            --bg: #e8edf5;
+            --bg: #f4f5f7;
+            --ink: #172b4d;
+            --muted: #626f86;
+            --line: #dfe1e6;
             --card: #ffffff;
-            --ink: #0f172a;
-            --muted: #64748b;
-            --line: #e2e8f0;
-            --primary: #4f46e5;
-            --primary-dark: #3730a3;
-            --danger: #dc2626;
-            --danger-dark: #b91c1c;
-            --shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+            --col: #f1f2f4;
+            --blue: #0c66e4;
+            --blue-dark: #0055cc;
+            --danger: #c9372c;
+            --shadow: 0 1px 1px rgba(9, 30, 66, 0.25), 0 0 1px rgba(9, 30, 66, 0.31);
         }
         * { box-sizing: border-box; }
         body {
             margin: 0;
             min-height: 100vh;
-            font-family: "Segoe UI", system-ui, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             color: var(--ink);
-            background:
-                radial-gradient(900px 420px at 10% -10%, #dbe4ff 0%, transparent 60%),
-                radial-gradient(700px 360px at 100% 0%, #e0e7ff 0%, transparent 55%),
-                var(--bg);
+            background: var(--bg);
         }
-        .page {
-            max-width: 980px;
-            margin: 0 auto;
-            padding: 36px 20px 64px;
-        }
-        .topbar {
+        header {
             display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
+            align-items: center;
             gap: 16px;
-            margin-bottom: 22px;
+            padding: 14px 20px;
+            background: #fff;
+            border-bottom: 1px solid var(--line);
         }
-        .eyebrow {
-            margin: 0 0 6px;
-            font-size: 12px;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: var(--primary);
-            font-weight: 700;
-        }
-        h1 {
-            margin: 0;
-            font-size: 32px;
-            letter-spacing: -0.03em;
-        }
-        h2 {
-            margin: 0 0 16px;
-            font-size: 20px;
-            letter-spacing: -0.02em;
-        }
-        .container {
-            background: var(--card);
-            border: 1px solid rgba(255,255,255,0.7);
-            border-radius: 20px;
-            padding: 28px;
-            box-shadow: var(--shadow);
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 13px;
-            font-weight: 650;
-            color: var(--muted);
-        }
-        input[type=text], textarea {
-            width: 100%;
-            padding: 12px 14px;
-            border-radius: 12px;
+        header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .board-switch { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .chip, .chip-add {
             border: 1px solid var(--line);
-            background: #f8fafc;
+            background: #fff;
             color: var(--ink);
+            border-radius: 999px;
+            padding: 10px 16px;
             font: inherit;
-            font-size: 15px;
-            outline: none;
-            transition: border-color .15s, box-shadow .15s, background .15s;
-        }
-        input[type=text]:focus, textarea:focus {
-            border-color: #a5b4fc;
-            background: #fff;
-            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
-        }
-        .composer {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 18px;
-        }
-        .composer label { display: none; }
-        .composer input[type=text],
-        .composer textarea {
-            flex: 1 1 240px;
-            margin: 0;
-        }
-        .composer textarea { flex-basis: 100%; }
-        button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 11px 16px;
-            font: inherit;
-            font-size: 14px;
-            font-weight: 650;
-            border-radius: 12px;
+            font-size: 16px;
             cursor: pointer;
-            transition: background .15s, transform .15s;
         }
-        button:hover { background: var(--primary-dark); }
-        button:active { transform: translateY(1px); }
-        button.ghost {
-            background: #eef2ff;
-            color: #312e81;
-        }
-        button.ghost:hover { background: #e0e7ff; }
-        button.danger {
-            background: #fef2f2;
-            color: var(--danger);
-        }
-        button.danger:hover { background: #fee2e2; color: var(--danger-dark); }
-        .message {
-            min-height: 0;
-            margin: 0 0 14px;
-            font-weight: 650;
-            font-size: 14px;
-        }
-        .message:empty { display: none; }
-        .message.success { color: #047857; }
-        .message.error { color: var(--danger); }
-        .section { margin: 0; }
-        .entity-list { display: flex; flex-direction: column; gap: 10px; }
-        .entity-list:empty,
-        .entity-list:not(:has(.entity-item)) {
-            color: var(--muted);
-            text-align: center;
-            padding: 28px 16px;
-            border: 1px dashed #cbd5e1;
+        .chip.active { background: #e9f2ff; border-color: #85b8ff; color: var(--blue-dark); font-weight: 650; }
+        .chip-add { color: var(--blue); border-style: dashed; }
+        #toast {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 40;
+            min-width: 260px;
+            max-width: 420px;
+            padding: 16px 18px;
             border-radius: 14px;
-            background: #f8fafc;
+            background: #1d2125;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 650;
+            box-shadow: 0 12px 32px rgba(9,30,66,.28);
+            opacity: 0;
+            transform: translateY(8px);
+            pointer-events: none;
+            transition: opacity .2s, transform .2s;
         }
-        .entity-item {
+        #toast.show { opacity: 1; transform: none; }
+        #toast.error { background: #ae2e24; }
+        #toast.success { background: #1f845a; }
+        .modal-back {
+            position: fixed;
+            inset: 0;
+            background: rgba(9,30,66,.5);
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 12px 12px 12px 16px;
-            border: 1px solid var(--line);
-            border-radius: 14px;
-            background: #fff;
-            box-shadow: 0 1px 0 rgba(15,23,42,0.03);
+            justify-content: center;
+            z-index: 50;
         }
-        .entity-item input[type=text],
-        .entity-item textarea {
-            margin: 0;
+        .modal {
+            width: min(460px, calc(100% - 32px));
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 18px 50px rgba(9,30,66,.28);
+        }
+        .modal h2 { margin: 0 0 14px; font-size: 22px; }
+        .modal input { font-size: 17px; padding: 12px 14px; }
+        .modal .row { margin-top: 16px; justify-content: flex-end; }
+        .board {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px 20px 32px;
+            overflow-x: auto;
+            min-height: calc(100vh - 62px);
+        }
+        .column {
+            width: 340px;
+            flex: 0 0 340px;
+            background: var(--col);
+            border-radius: 12px;
+            padding: 8px;
+            max-height: calc(100vh - 96px);
+            display: flex;
+            flex-direction: column;
+        }
+        .column-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 6px 10px;
+        }
+        .column-head input {
+            flex: 1;
             border: none;
             background: transparent;
-            box-shadow: none;
-            padding: 6px 4px;
-            font-weight: 650;
-        }
-        .entity-item textarea {
-            font-weight: 450;
+            font: inherit;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
             color: var(--muted);
-            min-height: 42px;
+            outline: none;
+            min-width: 0;
         }
-        .entity-item input[readonly],
-        .entity-item textarea[readonly] { cursor: default; }
-        .entity-item input:not([readonly]),
-        .entity-item textarea:not([readonly]) {
-            background: #f8fafc;
-            border: 1px solid var(--line);
+        .count {
+            font-size: 15px;
+            color: var(--muted);
+            background: #e4e6ea;
+            border-radius: 999px;
+            padding: 1px 7px;
         }
-        .actions {
+        .icon-btn {
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            border-radius: 6px;
+            width: 40px;
+            height: 40px;
+            font-size: 26px;
+        }
+        .icon-btn:hover { background: rgba(9, 30, 66, 0.08); color: var(--ink); }
+        .icon-btn.danger:hover { color: var(--danger); }
+        .cards {
+            overflow-y: auto;
             display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            justify-content: flex-end;
+            flex-direction: column;
+            gap: 8px;
+            padding: 0 2px 8px;
+            min-height: 8px;
         }
-        .actions button { padding: 8px 12px; font-size: 13px; }
-        .nested { margin: 0; }
-        @media (max-width: 720px) {
-            h1 { font-size: 26px; }
-            .entity-item { flex-direction: column; align-items: stretch; }
-            .actions { justify-content: flex-start; }
+        .card {
+            background: var(--card);
+            border-radius: 8px;
+            padding: 10px 12px;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+        }
+        .card h3 { margin: 0; font-size: 17px; font-weight: 650; line-height: 1.35; }
+        .card p { margin: 8px 0 0; font-size: 15px; color: var(--muted); }
+        .card-actions { display: none; gap: 6px; margin-top: 8px; }
+        .card.editing .card-actions, .card:hover .card-actions { display: flex; }
+        .card input, .card textarea, .add-card input, .add-card textarea, .modal input {
+            width: 100%;
+            border: 1px solid #8590a2;
+            border-radius: 6px;
+            padding: 8px;
+            font: inherit;
+            font-size: 14px;
+            outline: none;
+        }
+        .card textarea, .add-card textarea { resize: vertical; min-height: 52px; margin-top: 6px; }
+        .add-card, .add-column {
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            text-align: left;
+            font: inherit;
+            font-size: 16px;
+            font-weight: 650;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .add-card:hover, .add-column:hover { background: rgba(9, 30, 66, 0.08); color: var(--ink); }
+        .composer { display: flex; flex-direction: column; gap: 6px; }
+        .row { display: flex; gap: 6px; }
+        button.primary {
+            background: var(--blue);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font: inherit;
+            font-size: 16px;
+            font-weight: 650;
+            cursor: pointer;
+        }
+        button.primary:hover { background: var(--blue-dark); }
+        button.link {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font: inherit;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .empty {
+            margin: 48px auto;
+            color: var(--muted);
+            text-align: center;
+        }
+        .add-column-wrap {
+            width: 340px;
+            flex: 0 0 340px;
         }
     </style>
 </head>
 <body>
-<div class="page">
-    <header class="topbar">
-        <div>
-            <p class="eyebrow">Board</p>
-            <h1>Gerenciador de Boards</h1>
-        </div>
+<header>
+    <h1>Boards</h1>
+    <div class="board-switch" id="board-switch"></div>
     </header>
-<div class="container">
-
-    <div id="msg" class="message"></div>
-
-    <!-- Seção Board -->
-    <section class="section" id="boards-section">
-        <h2>Boards</h2>
-        <form id="board-form" class="composer">
-            <label for="board-name">Nome do Board:</label>
-            <input type="text" id="board-name" required placeholder="Digite o nome do board" />
-            <button type="submit">Criar Board</button>
-        </form>
-        <div id="boards-list" class="entity-list"></div>
-    </section>
-
-    <!-- Seção Columns (dynamic) -->
-    <section class="section" id="columns-section" style="display:none;">
-        <h2>Colunas do Board: <span id="current-board-name"></span></h2>
-        <form id="column-form" class="composer">
-            <label for="column-name">Nome da Coluna:</label>
-            <input type="text" id="column-name" required placeholder="Digite o nome da coluna" />
-            <button type="submit">Criar Coluna</button>
-            <button type="button" id="back-to-boards" class="ghost">Voltar para Boards</button>
-        </form>
-        <div id="columns-list" class="entity-list nested"></div>
-    </section>
-
-    <!-- Seção Tasks (dynamic) -->
-    <section class="section" id="tasks-section" style="display:none;">
-        <h2>Tarefas da Coluna: <span id="current-column-name"></span></h2>
-        <form id="task-form" class="composer">
-            <label for="task-name">Nome da Tarefa:</label>
-            <input type="text" id="task-name" required placeholder="Digite o nome da tarefa" />
-            <label for="task-desc">Descrição (opcional):</label>
-            <textarea id="task-desc" rows="2" placeholder="Descrição da tarefa"></textarea>
-            <button type="submit">Criar Tarefa</button>
-            <button type="button" id="back-to-columns" class="ghost">Voltar para Colunas</button>
-        </form>
-        <div id="tasks-list" class="entity-list nested"></div>
-    </section>
-</div>
-
+<main class="board" id="board"></main>
+<div id="toast" role="status"></div>
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
+const API = 'http://localhost:8080';
+const boardEl = document.getElementById('board');
+const switchEl = document.getElementById('board-switch');
+let boards = [];
+let selectedId = null;
 
-        const API_BASE = 'http://localhost:8080';
-
-        const msgDiv = document.getElementById('msg');
-
-        // Boards DOM refs
-        const boardForm = document.getElementById('board-form');
-        const boardNameInput = document.getElementById('board-name');
-        const boardsListDiv = document.getElementById('boards-list');
-
-        // Columns DOM refs
-        const columnsSection = document.getElementById('columns-section');
-        const columnsListDiv = document.getElementById('columns-list');
-        const columnForm = document.getElementById('column-form');
-        const columnNameInput = document.getElementById('column-name');
-        const currentBoardNameSpan = document.getElementById('current-board-name');
-        const backToBoardsBtn = document.getElementById('back-to-boards');
-
-        // Tasks DOM refs
-        const tasksSection = document.getElementById('tasks-section');
-        const tasksListDiv = document.getElementById('tasks-list');
-        const taskForm = document.getElementById('task-form');
-        const taskNameInput = document.getElementById('task-name');
-        const taskDescInput = document.getElementById('task-desc');
-        const currentColumnNameSpan = document.getElementById('current-column-name');
-        const backToColumnsBtn = document.getElementById('back-to-columns');
-
-        // Estado atual selecionado
-        let selectedBoard = null;
-        let selectedColumn = null;
-
-        function showMessage(text, type='success') {
-            msgDiv.textContent = text;
-            msgDiv.className = 'message ' + (type === 'success' ? 'success' : 'error');
-            setTimeout(() => {
-                msgDiv.textContent = '';
-                msgDiv.className = 'message';
-            }, 4000);
-        }
-
-        // --- BOARDS ---
-
-        async function loadBoards() {
-            try {
-                const res = await fetch(`${API_BASE}/boards`);
-                if(!res.ok) throw new Error(`Erro ao carregar boards: ${res.status} ${res.statusText}`);
-                const boards = await res.json();
-                renderBoards(boards);
-            } catch(e) {
-                console.error(e);
-                showMessage(e.message, 'error');
-            }
-        }
-
-        function renderBoards(boards) {
-            boardsListDiv.innerHTML = '';
-            if(boards.length === 0) {
-                boardsListDiv.textContent = 'Nenhum board cadastrado.';
-                return;
-            }
-
-            boards.forEach(board => {
-                const div = document.createElement('div');
-                div.className = 'entity-item';
-
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = board.name;
-                input.readOnly = true;
-
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'actions';
-
-                const btnEdit = document.createElement('button');
-                btnEdit.textContent = 'Editar';
-                btnEdit.onclick = () => {
-                    input.readOnly = false;
-                    input.focus();
-                    btnEdit.style.display = 'none';
-                    btnSave.style.display = 'inline-block';
-                    btnCancel.style.display = 'inline-block';
-                };
-
-                const btnSave = document.createElement('button');
-                btnSave.textContent = 'Salvar';
-                btnSave.style.display = 'none';
-                btnSave.onclick = async () => {
-                    const newName = input.value.trim();
-                    if(!newName) {
-                        showMessage('Nome do board não pode ser vazio', 'error');
-                        return;
-                    }
-                    try {
-                        const res = await fetch(`${API_BASE}/boards/${board.id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: board.id, name: newName, columns: board.columns || [] })
-                        });
-                        if(!res.ok) throw new Error(`Erro ao atualizar board: ${res.status} ${res.statusText}`);
-                        board.name = newName;
-                        input.readOnly = true;
-                        btnEdit.style.display = 'inline-block';
-                        btnSave.style.display = 'none';
-                        btnCancel.style.display = 'none';
-                        showMessage('Board atualizado com sucesso');
-                        loadBoards(); // Recarrega para manter ordem e dados
-                    } catch(e) {
-                        console.error(e);
-                        showMessage(e.message, 'error');
-                    }
-                };
-
-                const btnCancel = document.createElement('button');
-                btnCancel.textContent = 'Cancelar';
-                btnCancel.style.display = 'none';
-                btnCancel.onclick = () => {
-                    input.value = board.name;
-                    input.readOnly = true;
-                    btnEdit.style.display = 'inline-block';
-                    btnSave.style.display = 'none';
-                    btnCancel.style.display = 'none';
-                };
-
-                const btnDelete = document.createElement('button');
-                btnDelete.textContent = 'Excluir';
-                btnDelete.className = 'danger';
-                btnDelete.onclick = async () => {
-                    if(!confirm(`Excluir board "${board.name}"?`)) return;
-                    try {
-                        const res = await fetch(`${API_BASE}/boards/${board.id}`, { method: 'DELETE' });
-                        if(!res.ok) throw new Error(`Erro ao excluir board: ${res.status} ${res.statusText}`);
-                        showMessage('Board excluído com sucesso');
-                        loadBoards();
-                    } catch(e) {
-                        console.error(e);
-                        showMessage(e.message, 'error');
-                    }
-                };
-
-                const btnViewColumns = document.createElement('button');
-                btnViewColumns.textContent = 'Ver Colunas';
-                btnViewColumns.onclick = () => {
-                    selectedBoard = board;
-                    currentBoardNameSpan.textContent = board.name;
-                    boardsListDiv.parentElement.style.display = 'none'; // esconder boards
-                    columnsSection.style.display = 'block';
-                    loadColumns(board.id);
-                };
-
-                actionsDiv.appendChild(btnViewColumns);
-                actionsDiv.appendChild(btnEdit);
-                actionsDiv.appendChild(btnSave);
-                actionsDiv.appendChild(btnCancel);
-                actionsDiv.appendChild(btnDelete);
-
-                div.appendChild(input);
-                div.appendChild(actionsDiv);
-                boardsListDiv.appendChild(div);
-            });
-        }
-
-        boardForm.onsubmit = async (e) => {
-            e.preventDefault();
-            const name = boardNameInput.value.trim();
-            if(!name) {
-                showMessage('Informe o nome do board', 'error');
-                return;
-            }
-            try {
-                const res = await fetch(`${API_BASE}/boards`, {
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ name, columns: [] })
-                });
-                if(!res.ok) throw new Error(`Erro ao criar board: ${res.status} ${res.statusText}`);
-                boardNameInput.value = '';
-                showMessage('Board criado com sucesso');
-                loadBoards();
-            } catch(e) {
-                console.error(e);
-                showMessage(e.message, 'error');
-            }
-        };
-
-        // --- COLUMNS ---
-
-        const columnFormSubmit = async e => {
-            e.preventDefault();
-            const name = columnNameInput.value.trim();
-            if(!name) {
-                showMessage('Informe o nome da coluna', 'error');
-                return;
-            }
-            try {
-                const res = await fetch(`${API_BASE}/boards/${selectedBoard.id}/columns`, {
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ name, tasks: [] })
-                });
-                if(!res.ok) throw new Error(`Erro ao criar coluna: ${res.status} ${res.statusText}`);
-                columnNameInput.value = '';
-                showMessage('Coluna criada com sucesso');
-                loadColumns(selectedBoard.id);
-            } catch(e) {
-                console.error(e);
-                showMessage(e.message, 'error');
-            }
-        };
-
-        async function loadColumns(boardId) {
-            try {
-                const res = await fetch(`${API_BASE}/boards/${boardId}/columns`);
-                if(!res.ok) throw new Error(`Erro ao carregar colunas: ${res.status} ${res.statusText}`);
-                const columns = await res.json();
-                renderColumns(columns);
-            } catch(e) {
-                console.error(e);
-                showMessage(e.message, 'error');
-            }
-        }
-
-        function renderColumns(columns) {
-            columnsListDiv.innerHTML = '';
-            if(columns.length === 0) {
-                columnsListDiv.textContent = 'Nenhuma coluna cadastrada.';
-                return;
-            }
-
-            columns.forEach(column => {
-                const div = document.createElement('div');
-                div.className = 'entity-item';
-
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = column.name;
-                input.readOnly = true;
-
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'actions';
-
-                const btnEdit = document.createElement('button');
-                btnEdit.textContent = 'Editar';
-                btnEdit.onclick = () => {
-                    input.readOnly = false;
-                    input.focus();
-                    btnEdit.style.display = 'none';
-                    btnSave.style.display = 'inline-block';
-                    btnCancel.style.display = 'inline-block';
-                };
-
-                const btnSave = document.createElement('button');
-                btnSave.textContent = 'Salvar';
-                btnSave.style.display = 'none';
-                btnSave.onclick = async () => {
-                    const newName = input.value.trim();
-                    if(!newName) {
-                        showMessage('Nome da coluna não pode ser vazio', 'error');
-                        return;
-                    }
-                    try {
-                        const res = await fetch(`${API_BASE}/columns/${column.id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({name: newName })
-                        });
-                        if(!res.ok) throw new Error(`Erro ao atualizar coluna: ${res.status} ${res.statusText}`);
-                        column.name = newName;
-                        input.readOnly = true;
-                        btnEdit.style.display = 'inline-block';
-                        btnSave.style.display = 'none';
-                        btnCancel.style.display = 'none';
-                        showMessage('Coluna atualizada com sucesso');
-                        loadColumns(selectedBoard.id);
-                    } catch(e) {
-                        console.error(e);
-                        showMessage(e.message, 'error');
-                    }
-                };
-
-                const btnCancel = document.createElement('button');
-                btnCancel.textContent = 'Cancelar';
-                btnCancel.style.display = 'none';
-                btnCancel.onclick = () => {
-                    input.value = column.name;
-                    input.readOnly = true;
-                    btnEdit.style.display = 'inline-block';
-                    btnSave.style.display = 'none';
-                    btnCancel.style.display = 'none';
-                };
-
-                const btnDelete = document.createElement('button');
-                btnDelete.textContent = 'Excluir';
-                btnDelete.className = 'danger';
-                btnDelete.onclick = async () => {
-                    if(!confirm(`Excluir coluna "${column.name}"?`)) return;
-                    try {
-                        const res = await fetch(`${API_BASE}/columns/${column.id}`, { method: 'DELETE' });
-                        if(!res.ok) throw new Error(`Erro ao excluir coluna: ${res.status} ${res.statusText}`);
-                        showMessage('Coluna excluída com sucesso');
-                        loadColumns(selectedBoard.id);
-                    } catch(e) {
-                        console.error(e);
-                        showMessage(e.message, 'error');
-                    }
-                };
-
-                const btnViewTasks = document.createElement('button');
-                btnViewTasks.textContent = 'Ver Tarefas';
-                btnViewTasks.onclick = () => {
-                    selectedColumn = column;
-                    currentColumnNameSpan.textContent = column.name;
-                    columnsSection.style.display = 'none';
-                    tasksSection.style.display = 'block';
-                    loadTasks(column.id);
-                };
-
-                actionsDiv.appendChild(btnViewTasks);
-                actionsDiv.appendChild(btnEdit);
-                actionsDiv.appendChild(btnSave);
-                actionsDiv.appendChild(btnCancel);
-                actionsDiv.appendChild(btnDelete);
-
-                div.appendChild(input);
-                div.appendChild(actionsDiv);
-                columnsListDiv.appendChild(div);
-            });
-        }
-
-        columnForm.onsubmit = columnFormSubmit;
-
-        backToBoardsBtn.onclick = () => {
-            selectedBoard = null;
-            columnsSection.style.display = 'none';
-            boardsListDiv.parentElement.style.display = 'block';
-            showMessage('');
-        };
-
-        // --- TASKS ---
-
-        const taskFormSubmit = async e => {
-            e.preventDefault();
-            const title = taskNameInput.value.trim();
-            if (!title) {
-                showMessage('Informe o nome da tarefa', 'error');
-                return;
-            }
-            const description = taskDescInput.value.trim();
-            try {
-                const res = await fetch(`${API_BASE}/cards`, {
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({
-                        title: taskNameInput.value.trim(),
-                        description: taskDescInput.value.trim(),
-                        blocked: false,
-                        blockReason: null,
-                        blocksAmount: 0,
-                        board_column_id: selectedColumn.id   // link da tarefa com a coluna correta
-                    })
-
-
-
-                });
-                if (!res.ok) throw new Error(`Erro ao criar tarefa: ${res.status} ${res.statusText}`);
-                taskNameInput.value = '';
-                taskDescInput.value = '';
-                showMessage('Tarefa criada com sucesso');
-                loadTasks(selectedColumn.id);
-            } catch (e) {
-                console.error(e);
-                showMessage(e.message, 'error');
-            }
-        };
-
-
-
-        async function loadTasks(columnId) {
-            try {
-                const res = await fetch(`${API_BASE}/columns/${columnId}/cards`);
-                if(!res.ok) throw new Error(`Erro ao carregar tarefas: ${res.status} ${res.statusText}`);
-                const tasks = await res.json();
-                renderTasks(tasks);
-            } catch(e) {
-                console.error(e);
-                showMessage(e.message, 'error');
-            }
-        }
-
-        function renderTasks(tasks) {
-            tasksListDiv.innerHTML = '';
-            if(tasks.length === 0) {
-                tasksListDiv.textContent = 'Nenhuma tarefa cadastrada.';
-                return;
-            }
-
-            tasks.forEach(task => {
-                const div = document.createElement('div');
-                div.className = 'entity-item';
-
-                const nameInput = document.createElement('input');
-                nameInput.type = 'text';
-                nameInput.value = task.title;
-                nameInput.readOnly = true;
-
-                const descInput = document.createElement('textarea');
-                descInput.value = task.description || '';
-                descInput.readOnly = true;
-                descInput.rows = 1;
-                descInput.style.resize = 'none';
-
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'actions';
-
-                const btnEdit = document.createElement('button');
-                btnEdit.textContent = 'Editar';
-                btnEdit.onclick = () => {
-                    nameInput.readOnly = false;
-                    descInput.readOnly = false;
-                    nameInput.focus();
-                    btnEdit.style.display = 'none';
-                    btnSave.style.display = 'inline-block';
-                    btnCancel.style.display = 'inline-block';
-                };
-
-                const btnSave = document.createElement('button');
-                btnSave.textContent = 'Salvar';
-                btnSave.style.display = 'none';
-                btnSave.onclick = async () => {
-                    const newName = nameInput.value.trim();
-                    if(!newName) {
-                        showMessage('Nome da tarefa não pode ser vazio', 'error');
-                        return;
-                    }
-                    try {
-                        const res = await fetch(`${API_BASE}/cards/${task.id}`, {
-                            method: 'PUT',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ id: task.id, title: newName, description: descInput.value })
-                        });
-                        if(!res.ok) throw new Error(`Erro ao atualizar tarefa: ${res.status} ${res.statusText}`);
-                        task.title = newName;
-                        task.description = descInput.value;
-                        nameInput.readOnly = true;
-                        descInput.readOnly = true;
-                        btnEdit.style.display = 'inline-block';
-                        btnSave.style.display = 'none';
-                        btnCancel.style.display = 'none';
-                        showMessage('Tarefa atualizada com sucesso');
-                        loadTasks(selectedColumn.id);
-                    } catch(e) {
-                        console.error(e);
-                        showMessage(e.message, 'error');
-                    }
-                };
-
-                const btnCancel = document.createElement('button');
-                btnCancel.textContent = 'Cancelar';
-                btnCancel.style.display = 'none';
-                btnCancel.onclick = () => {
-                    nameInput.value = task.title;
-                    descInput.value = task.description || '';
-                    nameInput.readOnly = true;
-                    descInput.readOnly = true;
-                    btnEdit.style.display = 'inline-block';
-                    btnSave.style.display = 'none';
-                    btnCancel.style.display = 'none';
-
-                };
-
-                const btnDelete = document.createElement('button');
-                btnDelete.textContent = 'Excluir';
-                btnDelete.className = 'danger';
-                btnDelete.onclick = async () => {
-                    if(!confirm(`Excluir tarefa "${task.title}"?`)) return;
-                    try {
-                        const res = await fetch(`${API_BASE}/cards/${task.id}`, { method: 'DELETE' });
-                        if(!res.ok) throw new Error(`Erro ao excluir tarefa: ${res.status} ${res.statusText}`);
-                        showMessage('Tarefa excluída com sucesso');
-                        loadTasks(selectedColumn.id);
-                    } catch(e) {
-                        console.error(e);
-                        showMessage(e.message, 'error');
-                    }
-                };
-
-                actionsDiv.appendChild(btnEdit);
-                actionsDiv.appendChild(btnSave);
-                actionsDiv.appendChild(btnCancel);
-                actionsDiv.appendChild(btnDelete);
-
-                div.appendChild(nameInput);
-                div.appendChild(descInput);
-                div.appendChild(actionsDiv);
-                tasksListDiv.appendChild(div);
-            });
-        }
-
-        taskForm.onsubmit = taskFormSubmit;
-
-        backToColumnsBtn.onclick = () => {
-            selectedColumn = null;
-            tasksSection.style.display = 'none';
-            columnsSection.style.display = 'block';
-            showMessage('');
-        };
-
-        // Inicializa
-        loadBoards();
-
+const toastEl = document.getElementById('toast');
+let toastTimer;
+function showMessage(text, type) {
+    toastEl.textContent = text || '';
+    toastEl.className = text ? ('show ' + (type || 'success')) : '';
+    clearTimeout(toastTimer);
+    if (text) toastTimer = setTimeout(() => { toastEl.className = ''; }, 3200);
+}
+function askText(title, placeholder, current, confirmLabel) {
+    return new Promise(resolve => {
+        const back = document.createElement('div');
+        back.className = 'modal-back';
+        const box = document.createElement('form');
+        box.className = 'modal';
+        const h = document.createElement('h2');
+        h.textContent = title;
+        const input = document.createElement('input');
+        input.placeholder = placeholder || '';
+        input.value = current || '';
+        const row = document.createElement('div');
+        row.className = 'row';
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.className = 'link';
+        cancel.textContent = 'Cancelar';
+        const ok = document.createElement('button');
+        ok.type = 'submit';
+        ok.className = 'primary';
+        ok.textContent = confirmLabel || 'Salvar';
+        const close = (value) => { back.remove(); resolve(value); };
+        cancel.onclick = () => close(null);
+        back.addEventListener('click', (e) => { if (e.target === back) close(null); });
+        box.onsubmit = (e) => { e.preventDefault(); close(input.value.trim() || null); };
+        row.append(cancel, ok);
+        box.append(h, input, row);
+        back.appendChild(box);
+        document.body.appendChild(back);
+        input.focus();
+        input.select();
     });
+}
+function askConfirm(title) {
+    return new Promise(resolve => {
+        const back = document.createElement('div');
+        back.className = 'modal-back';
+        const box = document.createElement('div');
+        box.className = 'modal';
+        const h = document.createElement('h2');
+        h.textContent = title;
+        const row = document.createElement('div');
+        row.className = 'row';
+        const cancel = document.createElement('button');
+        cancel.className = 'link';
+        cancel.textContent = 'Cancelar';
+        const ok = document.createElement('button');
+        ok.className = 'primary';
+        ok.textContent = 'Excluir';
+        const close = (value) => { back.remove(); resolve(value); };
+        cancel.onclick = () => close(false);
+        ok.onclick = () => close(true);
+        back.addEventListener('click', (e) => { if (e.target === back) close(false); });
+        row.append(cancel, ok);
+        box.append(h, row);
+        back.appendChild(box);
+        document.body.appendChild(back);
+    });
+}
 
+async function api(path, options) {
+    const res = await fetch(API + path, options);
+    if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+    if (res.status === 204) return null;
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
+}
+
+async function loadBoards() {
+    boards = await api('/boards');
+    if (!selectedId && boards.length) selectedId = boards[0].id;
+    if (selectedId && !boards.some(b => b.id === selectedId)) selectedId = boards[0] ? boards[0].id : null;
+    renderSwitch();
+    await renderBoard();
+}
+
+function renderSwitch() {
+    switchEl.innerHTML = '';
+    boards.forEach(board => {
+        const btn = document.createElement('button');
+        btn.className = 'chip' + (board.id === selectedId ? ' active' : '');
+        btn.textContent = board.name;
+        btn.onclick = async () => { selectedId = board.id; renderSwitch(); await renderBoard(); };
+        switchEl.appendChild(btn);
+    });
+    const add = document.createElement('button');
+    add.className = 'chip-add';
+    add.textContent = '+ Board';
+    add.onclick = async () => {
+        const name = await askText('Novo board', 'Nome do board', '', 'Criar');
+        if (!name) return;
+        const created = await api('/boards', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, columns: [] })
+        });
+        selectedId = created && created.id ? created.id : null;
+        showMessage('Board criado', 'success');
+        await loadBoards();
+    };
+    switchEl.appendChild(add);
+}
+
+async function renderBoard() {
+    boardEl.innerHTML = '';
+    const board = boards.find(b => b.id === selectedId);
+    if (!board) {
+        boardEl.innerHTML = '<p class="empty">Crie um board para começar.</p>';
+        return;
+    }
+    let columns = [];
+    try {
+        columns = await api('/boards/' + board.id + '/columns');
+    } catch (e) {
+        showMessage(e.message, 'error');
+        return;
+    }
+    const cardsByColumn = await Promise.all(columns.map(async col => {
+        try { return await api('/columns/' + col.id + '/cards'); }
+        catch (e) { return []; }
+    }));
+    columns.forEach((col, i) => columnView(board, col, cardsByColumn[i] || []));
+    addColumn(board);
+}
+
+function columnView(board, column, cards) {
+    const col = document.createElement('section');
+    col.className = 'column';
+    const head = document.createElement('div');
+    head.className = 'column-head';
+    const name = document.createElement('input');
+    name.value = column.name;
+    name.addEventListener('change', async () => {
+        const next = name.value.trim();
+        if (!next) { name.value = column.name; return; }
+        try {
+            await api('/columns/' + column.id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: next })
+            });
+        } catch (e) { showMessage(e.message, 'error'); }
+    });
+    const count = document.createElement('span');
+    count.className = 'count';
+    count.textContent = cards.length;
+    const del = document.createElement('button');
+    del.className = 'icon-btn danger';
+    del.textContent = '×';
+    del.title = 'Excluir coluna';
+    del.onclick = async () => {
+        if (!await askConfirm('Excluir a coluna "' + column.name + '"?')) return;
+        try {
+            await api('/columns/' + column.id, { method: 'DELETE' });
+            await renderBoard();
+        } catch (e) { showMessage(e.message, 'error'); }
+    };
+    head.append(name, count, del);
+    const list = document.createElement('div');
+    list.className = 'cards';
+    cards.forEach(card => list.appendChild(cardView(column, card)));
+    const add = document.createElement('button');
+    add.className = 'add-card';
+    add.textContent = '+ Criar';
+    add.onclick = () => openComposer(list, add, column);
+    col.append(head, list, add);
+    boardEl.appendChild(col);
+}
+
+function cardView(column, card) {
+    const el = document.createElement('article');
+    el.className = 'card';
+    const title = document.createElement('h3');
+    title.textContent = card.title || card.name || 'Sem título';
+    el.appendChild(title);
+    if (card.description) {
+        const desc = document.createElement('p');
+        desc.textContent = card.description;
+        el.appendChild(desc);
+    }
+    const actions = document.createElement('div');
+    actions.className = 'card-actions';
+    const edit = document.createElement('button');
+    edit.className = 'link';
+    edit.textContent = 'Editar';
+    edit.onclick = (ev) => { ev.stopPropagation(); editCard(el, column, card); };
+    const remove = document.createElement('button');
+    remove.className = 'link';
+    remove.textContent = 'Excluir';
+    remove.onclick = async (ev) => {
+        ev.stopPropagation();
+        if (!await askConfirm('Excluir este card?')) return;
+        try {
+            await api('/cards/' + card.id, { method: 'DELETE' });
+            await renderBoard();
+        } catch (e) { showMessage(e.message, 'error'); }
+    };
+    actions.append(edit, remove);
+    el.appendChild(actions);
+    return el;
+}
+
+function editCard(el, column, card) {
+    el.classList.add('editing');
+    el.innerHTML = '';
+    const title = document.createElement('input');
+    title.value = card.title || '';
+    const desc = document.createElement('textarea');
+    desc.value = card.description || '';
+    const actions = document.createElement('div');
+    actions.className = 'card-actions';
+    actions.style.display = 'flex';
+    const save = document.createElement('button');
+    save.className = 'primary';
+    save.textContent = 'Salvar';
+    save.onclick = async () => {
+        if (!title.value.trim()) return showMessage('Informe o título', 'error');
+        try {
+            await api('/cards/' + card.id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: card.id, title: title.value.trim(), description: desc.value })
+            });
+            await renderBoard();
+        } catch (e) { showMessage(e.message, 'error'); }
+    };
+    const cancel = document.createElement('button');
+    cancel.className = 'link';
+    cancel.textContent = 'Cancelar';
+    cancel.onclick = () => renderBoard();
+    actions.append(save, cancel);
+    el.append(title, desc, actions);
+}
+
+function openComposer(list, button, column) {
+    const box = document.createElement('div');
+    box.className = 'composer';
+    const title = document.createElement('input');
+    title.placeholder = 'Título do card';
+    const desc = document.createElement('textarea');
+    desc.placeholder = 'Descrição (opcional)';
+    const row = document.createElement('div');
+    row.className = 'row';
+    const save = document.createElement('button');
+    save.className = 'primary';
+    save.textContent = 'Criar';
+    const cancel = document.createElement('button');
+    cancel.className = 'link';
+    cancel.textContent = 'Cancelar';
+    cancel.onclick = () => { box.replaceWith(button); };
+    save.onclick = async () => {
+        if (!title.value.trim()) return showMessage('Informe o título', 'error');
+        try {
+            await api('/cards', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: title.value.trim(),
+                    description: desc.value.trim(),
+                    blocked: false,
+                    blockReason: null,
+                    blocksAmount: 0,
+                    board_column_id: column.id
+                })
+            });
+            showMessage('Card criado', 'success');
+            await renderBoard();
+        } catch (e) { showMessage(e.message, 'error'); }
+    };
+    row.append(save, cancel);
+    box.append(title, desc, row);
+    button.replaceWith(box);
+    title.focus();
+}
+
+function addColumn(board) {
+    const wrap = document.createElement('div');
+    wrap.className = 'add-column-wrap';
+    const btn = document.createElement('button');
+    btn.className = 'add-card';
+    btn.textContent = '+ Adicionar coluna';
+    btn.onclick = async () => {
+        const name = await askText('Nova coluna', 'Nome da coluna', '', 'Adicionar');
+        if (!name) return;
+        try {
+            await api('/boards/' + board.id + '/columns', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, tasks: [] })
+            });
+            showMessage('Coluna criada', 'success');
+            await renderBoard();
+        } catch (e) { showMessage(e.message, 'error'); }
+    };
+    wrap.appendChild(btn);
+    boardEl.appendChild(wrap);
+}
+
+loadBoards().catch(e => showMessage(e.message, 'error'));
 </script>
-</div>
-
 </body>
 </html>
