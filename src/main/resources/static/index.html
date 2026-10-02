@@ -4,103 +4,210 @@
     <meta charset="UTF-8" />
     <title>Gerenciador de Boards Completo</title>
     <style>
+        :root {
+            --bg: #e8edf5;
+            --card: #ffffff;
+            --ink: #0f172a;
+            --muted: #64748b;
+            --line: #e2e8f0;
+            --primary: #4f46e5;
+            --primary-dark: #3730a3;
+            --danger: #dc2626;
+            --danger-dark: #b91c1c;
+            --shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+        }
+        * { box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
-            margin: 0; padding: 20px;
-            display: flex; justify-content: center;
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(900px 420px at 10% -10%, #dbe4ff 0%, transparent 60%),
+                radial-gradient(700px 360px at 100% 0%, #e0e7ff 0%, transparent 55%),
+                var(--bg);
+        }
+        .page {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 36px 20px 64px;
+        }
+        .topbar {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+        .eyebrow {
+            margin: 0 0 6px;
+            font-size: 12px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--primary);
+            font-weight: 700;
+        }
+        h1 {
+            margin: 0;
+            font-size: 32px;
+            letter-spacing: -0.03em;
+        }
+        h2 {
+            margin: 0 0 16px;
+            font-size: 20px;
+            letter-spacing: -0.02em;
         }
         .container {
-            max-width: 900px;
-            width: 100%;
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
-        }
-        h1, h2, h3 {
-            color: #333;
-            margin-top: 0;
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.7);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: var(--shadow);
         }
         label {
-            font-weight: 600;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 650;
+            color: var(--muted);
         }
         input[type=text], textarea {
             width: 100%;
-            padding: 8px 10px;
-            margin: 6px 0 12px 0;
-            box-sizing: border-box;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            font-size: 14px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: #f8fafc;
+            color: var(--ink);
+            font: inherit;
+            font-size: 15px;
+            outline: none;
+            transition: border-color .15s, box-shadow .15s, background .15s;
         }
+        input[type=text]:focus, textarea:focus {
+            border-color: #a5b4fc;
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+        }
+        .composer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .composer label { display: none; }
+        .composer input[type=text],
+        .composer textarea {
+            flex: 1 1 240px;
+            margin: 0;
+        }
+        .composer textarea { flex-basis: 100%; }
         button {
-            background: #287bff;
+            background: var(--primary);
             color: white;
             border: none;
-            padding: 10px 18px;
-            font-size: 15px;
-            border-radius: 8px;
+            padding: 11px 16px;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 650;
+            border-radius: 12px;
             cursor: pointer;
-            margin-right: 8px;
-            transition: background 0.3s ease;
+            transition: background .15s, transform .15s;
         }
-        button:hover {
-            background: #1a5fe4;
+        button:hover { background: var(--primary-dark); }
+        button:active { transform: translateY(1px); }
+        button.ghost {
+            background: #eef2ff;
+            color: #312e81;
         }
+        button.ghost:hover { background: #e0e7ff; }
         button.danger {
-            background: #e04848;
+            background: #fef2f2;
+            color: var(--danger);
         }
-        button.danger:hover {
-            background: #b93131;
-        }
+        button.danger:hover { background: #fee2e2; color: var(--danger-dark); }
         .message {
+            min-height: 0;
+            margin: 0 0 14px;
+            font-weight: 650;
+            font-size: 14px;
+        }
+        .message:empty { display: none; }
+        .message.success { color: #047857; }
+        .message.error { color: var(--danger); }
+        .section { margin: 0; }
+        .entity-list { display: flex; flex-direction: column; gap: 10px; }
+        .entity-list:empty,
+        .entity-list:not(:has(.entity-item)) {
+            color: var(--muted);
             text-align: center;
-            margin: 15px 0;
-            font-weight: 600;
-        }
-        .message.success {
-            color: green;
-        }
-        .message.error {
-            color: #d93737;
-        }
-        .section {
-            margin-bottom: 40px;
-        }
-        .entity-list {
-            border-top: 1px solid #ddd;
-            padding-top: 10px;
+            padding: 28px 16px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 14px;
+            background: #f8fafc;
         }
         .entity-item {
-            padding: 10px 12px;
-            border-bottom: 1px solid #eee;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 12px 12px 16px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: #fff;
+            box-shadow: 0 1px 0 rgba(15,23,42,0.03);
         }
-        .entity-item input[type=text], .entity-item textarea {
-            margin-right: 12px;
+        .entity-item input[type=text],
+        .entity-item textarea {
+            margin: 0;
+            border: none;
+            background: transparent;
+            box-shadow: none;
+            padding: 6px 4px;
+            font-weight: 650;
         }
-        .actions button {
-            margin-left: 6px;
+        .entity-item textarea {
+            font-weight: 450;
+            color: var(--muted);
+            min-height: 42px;
         }
-        .nested {
-            margin-left: 30px;
+        .entity-item input[readonly],
+        .entity-item textarea[readonly] { cursor: default; }
+        .entity-item input:not([readonly]),
+        .entity-item textarea:not([readonly]) {
+            background: #f8fafc;
+            border: 1px solid var(--line);
+        }
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+        .actions button { padding: 8px 12px; font-size: 13px; }
+        .nested { margin: 0; }
+        @media (max-width: 720px) {
+            h1 { font-size: 26px; }
+            .entity-item { flex-direction: column; align-items: stretch; }
+            .actions { justify-content: flex-start; }
         }
     </style>
 </head>
 <body>
-
+<div class="page">
+    <header class="topbar">
+        <div>
+            <p class="eyebrow">Board</p>
+            <h1>Gerenciador de Boards</h1>
+        </div>
+    </header>
 <div class="container">
-    <h1>Gerenciador Completo de Boards</h1>
 
     <div id="msg" class="message"></div>
 
     <!-- Seção Board -->
     <section class="section" id="boards-section">
         <h2>Boards</h2>
-        <form id="board-form">
+        <form id="board-form" class="composer">
             <label for="board-name">Nome do Board:</label>
             <input type="text" id="board-name" required placeholder="Digite o nome do board" />
             <button type="submit">Criar Board</button>
@@ -111,11 +218,11 @@
     <!-- Seção Columns (dynamic) -->
     <section class="section" id="columns-section" style="display:none;">
         <h2>Colunas do Board: <span id="current-board-name"></span></h2>
-        <form id="column-form">
+        <form id="column-form" class="composer">
             <label for="column-name">Nome da Coluna:</label>
             <input type="text" id="column-name" required placeholder="Digite o nome da coluna" />
             <button type="submit">Criar Coluna</button>
-            <button type="button" id="back-to-boards" style="background:#555;">Voltar para Boards</button>
+            <button type="button" id="back-to-boards" class="ghost">Voltar para Boards</button>
         </form>
         <div id="columns-list" class="entity-list nested"></div>
     </section>
@@ -123,13 +230,13 @@
     <!-- Seção Tasks (dynamic) -->
     <section class="section" id="tasks-section" style="display:none;">
         <h2>Tarefas da Coluna: <span id="current-column-name"></span></h2>
-        <form id="task-form">
+        <form id="task-form" class="composer">
             <label for="task-name">Nome da Tarefa:</label>
             <input type="text" id="task-name" required placeholder="Digite o nome da tarefa" />
             <label for="task-desc">Descrição (opcional):</label>
             <textarea id="task-desc" rows="2" placeholder="Descrição da tarefa"></textarea>
             <button type="submit">Criar Tarefa</button>
-            <button type="button" id="back-to-columns" style="background:#555;">Voltar para Colunas</button>
+            <button type="button" id="back-to-columns" class="ghost">Voltar para Colunas</button>
         </form>
         <div id="tasks-list" class="entity-list nested"></div>
     </section>
@@ -649,6 +756,7 @@
     });
 
 </script>
+</div>
 
 </body>
 </html>
